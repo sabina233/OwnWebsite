@@ -1,0 +1,113 @@
+/**
+ * 全局样式 - 温馨风格主题
+ * 支持深浅主题切换
+ */
+
+/* ========== CSS变量定义 ========== */
+:root {
+  /* 浅色主题配色 */
+  --bg-primary: #FFF8F0;          /* 主背景 - 暖白色 */
+  --bg-secondary: #FFF3E6;        /* 次背景 - 淡橙色 */
+  --bg-card: #FFFFFF;             /* 卡片背景 */
+  --text-primary: #4A3728;        /* 主文字 - 深棕色 */
+  --text-secondary: #8B7355;      /* 次文字 - 浅棕色 */
+  --accent-primary: #E8A87C;      /* 主强调色 - 暖橙色 */
+  --accent-secondary: #D4A574;    /* 次强调色 */
+  --border-color: #F0E6D8;        /* 边框颜色 */
+  --shadow: 0 4px 12px rgba(232, 168, 124, 0.15);  /* 柔和阴影 */
+  --radius: 12px;                 /* 圆角大小 */
+}
+
+/* 深色主题配色 */
+[data-theme="dark"] {
+  --bg-primary: #2D2520;          /* 主背景 - 深棕色 */
+  --bg-secondary: #3D3530;        /* 次背景 */
+  --bg-card: #4A403A;             /* 卡片背景 */
+  --text-primary: #F5E6D3;        /* 主文字 - 暖白色 */
+  --text-secondary: #C4A882;      /* 次文字 */
+  --accent-primary: #E8A87C;      /* 主强调色保持一致 */
+  --accent-secondary: #D4A574;
+  --border-color: #5A5048;        /* 边框颜色 */
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 全局重置 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-secondary);
+}
+
+/* ========== 通用容器 ========== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ========== 卡片样式 ========== */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(232, 168, 124, 0.2);
+}
+
+/* ========== 按钮样式 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-1px);
+}
+
+/* ========== 页面过渡动画 ========== */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}

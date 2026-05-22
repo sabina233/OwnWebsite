@@ -1,0 +1,26 @@
+# 依赖目录
+node_modules/
+bin/
+obj/
+
+# IDE文件
+.vs/
+.vscode/
+.idea/
+
+# 构建输出
+dist/
+
+# 环境变量
+.env
+.env.local
+
+# 上传文件（可选，如果需要保留上传内容请注释此行）
+# uploads/
+
+# 日志文件
+*.log
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
