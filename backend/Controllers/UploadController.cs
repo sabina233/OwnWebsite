@@ -48,10 +48,10 @@ public class UploadController : ControllerBase
             return BadRequest(new { message = "不支持的文件格式，请上传 JPG、PNG、GIF 或 WebP 格式的图片" });
         }
 
-        // 限制文件大小（10MB）
-        if (file.Length > 10 * 1024 * 1024)
+        // 限制文件大小（50MB）
+        if (file.Length > 50 * 1024 * 1024)
         {
-            return BadRequest(new { message = "文件大小不能超过10MB" });
+            return BadRequest(new { message = "文件大小不能超过50MB" });
         }
 
         // 创建上传目录

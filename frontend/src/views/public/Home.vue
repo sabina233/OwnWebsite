@@ -146,18 +146,20 @@ onMounted(async () => {
 }
 
 .avatar {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   margin: 0 auto 24px;
   border-radius: 50%;
   overflow: hidden;
   border: 4px solid var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(232, 168, 124, 0.3);
 }
 
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .title {

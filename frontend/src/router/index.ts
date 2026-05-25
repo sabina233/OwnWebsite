@@ -66,7 +66,19 @@ const router = createRouter({
           path: '',
           name: 'PrivateGate',
           component: () => import('@/views/private/PrivateGate.vue'),
-          meta: { title: '私密空间' }
+          meta: { title: '秘密空间' }
+        },
+        {
+          path: 'articles',
+          name: 'PrivateArticles',
+          component: () => import('@/views/private/PrivateArticles.vue'),
+          meta: { title: '私密文章', requiresAuth: true }
+        },
+        {
+          path: 'articles/:id',
+          name: 'PrivateArticleDetail',
+          component: () => import('@/views/private/PrivateArticleDetail.vue'),
+          meta: { title: '文章详情', requiresAuth: true }
         },
         {
           path: 'diary',

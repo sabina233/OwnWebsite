@@ -19,7 +19,7 @@
           <router-link to="/contact" class="nav-link">联系</router-link>
           <router-link to="/private" class="nav-link private-link">
             <el-icon><Lock /></el-icon>
-            日记
+            秘密
           </router-link>
         </nav>
 
