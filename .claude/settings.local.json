@@ -14,7 +14,10 @@
       "Bash(git push *)",
       "Bash(git pull *)",
       "Bash(dotnet run *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(taskkill *)",
+      "Read(//c/Users/Administrator/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python scripts/search.py \"personal website portfolio blog photography warm cozy modern minimal\" --design-system -p \"PersonalWebsite\" -f markdown)"
     ]
   }
 }
