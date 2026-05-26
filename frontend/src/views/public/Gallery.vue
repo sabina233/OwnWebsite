@@ -125,9 +125,9 @@ let observer: IntersectionObserver | null = null
 
 /**
  * 获取照片宽高比（用于瀑布流）
+ * 默认 4:3 比例
  */
-const getAspectRatio = (photo: Photo) => {
-  // 默认 4:3 比例，实际可根据图片元数据调整
+const getAspectRatio = (_photo: Photo) => {
   return '75%'
 }
 

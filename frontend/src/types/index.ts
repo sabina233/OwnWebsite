@@ -77,7 +77,7 @@ export interface Photo {
 
 /** 网站设置类型 */
 export interface SiteSettings {
-  id: number
+  id?: number
   siteName?: string
   siteDescription?: string
   avatar?: string

@@ -17,6 +17,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5116',
         changeOrigin: true
+      },
+      // 代理静态文件请求（图片等）
+      '/uploads': {
+        target: 'http://localhost:5116',
+        changeOrigin: true
       }
     }
   }

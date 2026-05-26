@@ -157,7 +157,7 @@ const router = createRouter({
 })
 
 // 路由守卫：处理页面标题和权限验证
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // 设置页面标题
   const title = to.meta.title as string
   document.title = title ? `${title} - 我的个人网站` : '我的个人网站'
