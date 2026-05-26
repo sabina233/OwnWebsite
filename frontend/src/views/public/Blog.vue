@@ -6,26 +6,29 @@
 
       <!-- 搜索和筛选区域 -->
       <div class="filter-bar">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索文章..."
-          clearable
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
+        <div class="search-box">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索文章..."
+            clearable
+            @keyup.enter="handleSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
 
+        <!-- 文章分类 -->
         <div class="category-tags">
-          <span
+          <button
             class="tag"
             :class="{ active: !selectedCategory }"
             @click="selectedCategory = ''"
           >
             全部
-          </span>
-          <span
+          </button>
+          <button
             v-for="cat in categories"
             :key="cat.id"
             class="tag"
@@ -33,7 +36,7 @@
             @click="selectedCategory = cat.name"
           >
             {{ cat.name }}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -41,7 +44,7 @@
       <div class="article-list">
         <div v-for="article in articles" :key="article.id" class="article-item card">
           <div class="article-cover" v-if="article.coverImage">
-            <img :src="article.coverImage" :alt="article.title" />
+            <img :src="article.coverImage" :alt="article.title" loading="lazy" />
           </div>
           <div class="article-info">
             <span class="category" v-if="article.category">{{ article.category }}</span>
@@ -55,6 +58,11 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-if="articles.length === 0 && !loading" class="empty-state">
+        暂无文章
       </div>
 
       <!-- 分页 -->
@@ -97,6 +105,9 @@ const pageSize = 10
 const totalCount = ref(0)
 const totalPages = ref(0)
 
+// 加载状态
+const loading = ref(false)
+
 /**
  * 格式化日期
  */
@@ -109,6 +120,7 @@ const formatDate = (dateStr: string) => {
  * 获取文章列表
  */
 const fetchArticles = async () => {
+  loading.value = true
   try {
     const { data } = await getArticles({
       page: currentPage.value,
@@ -119,6 +131,20 @@ const fetchArticles = async () => {
     articles.value = data.items
     totalCount.value = data.totalCount
     totalPages.value = data.totalPages
+  } catch {
+    // 静默处理
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 获取分类列表
+ */
+const fetchCategories = async () => {
+  try {
+    const { data } = await getCategories()
+    categories.value = data
   } catch {
     // 静默处理
   }
@@ -139,13 +165,8 @@ watch(selectedCategory, () => {
 })
 
 // 初始化
-onMounted(async () => {
-  try {
-    const { data } = await getCategories()
-    categories.value = data
-  } catch {
-    // 静默处理
-  }
+onMounted(() => {
+  fetchCategories()
   fetchArticles()
 })
 </script>
@@ -162,21 +183,25 @@ onMounted(async () => {
   margin-bottom: 32px;
 }
 
+.search-box {
+  margin-bottom: 16px;
+}
+
 .category-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .tag {
-  padding: 6px 16px;
+  padding: 8px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  color: var(--text-secondary);
 }
 
 .tag:hover,
@@ -203,6 +228,7 @@ onMounted(async () => {
   width: 240px;
   min-height: 160px;
   overflow: hidden;
+  border-radius: 12px 0 0 12px;
 }
 
 .article-cover img {
@@ -219,7 +245,7 @@ onMounted(async () => {
 .category {
   display: inline-block;
   padding: 4px 12px;
-  background: var(--bg-secondary);
+  background: var(--accent-light);
   color: var(--accent-primary);
   border-radius: 16px;
   font-size: 12px;
@@ -233,6 +259,7 @@ onMounted(async () => {
 
 .article-title a {
   color: var(--text-primary);
+  text-decoration: none;
 }
 
 .article-title a:hover {
@@ -244,12 +271,23 @@ onMounted(async () => {
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .article-meta {
   display: flex;
   gap: 16px;
   font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px;
   color: var(--text-secondary);
 }
 
@@ -258,5 +296,18 @@ onMounted(async () => {
   margin-top: 40px;
   display: flex;
   justify-content: center;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .article-item {
+    flex-direction: column;
+  }
+
+  .article-cover {
+    width: 100%;
+    min-height: 200px;
+    border-radius: 12px 12px 0 0;
+  }
 }
 </style>

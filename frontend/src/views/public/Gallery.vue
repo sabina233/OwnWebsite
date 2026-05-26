@@ -1,19 +1,19 @@
 <template>
-  <!-- 摄影作品页面 - 壁纸网站风格（瀑布流、懒加载、无限滚动） -->
+  <!-- 摄影作品页面 - 壁纸网站风格 -->
   <div class="gallery">
     <div class="container">
       <h1 class="page-title">摄影作品</h1>
 
       <!-- 分类筛选 -->
       <div class="category-filter">
-        <span
+        <button
           class="tag"
           :class="{ active: !selectedCategory }"
           @click="selectedCategory = ''"
         >
           全部
-        </span>
-        <span
+        </button>
+        <button
           v-for="cat in photoCategories"
           :key="cat"
           class="tag"
@@ -21,46 +21,45 @@
           @click="selectedCategory = cat"
         >
           {{ cat }}
-        </span>
+        </button>
       </div>
 
       <!-- 瀑布流照片墙 -->
-      <div class="masonry-grid" ref="masonryRef">
+      <div class="masonry-grid">
         <div
-          v-for="photo in photos"
+          v-for="photo in filteredPhotos"
           :key="photo.id"
           class="masonry-item"
           @click="openLightbox(photo)"
         >
-          <div class="photo-wrapper" :style="{ paddingBottom: getAspectRatio(photo) }">
-            <img
-              :src="photo.thumbnailPath || photo.filePath"
-              :alt="photo.title || '摄影作品'"
-              loading="lazy"
-              @load="onImageLoad"
-            />
-          </div>
+          <img
+            :src="photo.thumbnailPath || photo.filePath"
+            :alt="photo.title || '摄影作品'"
+            loading="lazy"
+            class="photo-img"
+          />
           <div class="photo-info" v-if="photo.title">
             <span>{{ photo.title }}</span>
           </div>
         </div>
       </div>
 
-      <!-- 加载更多触发器 -->
-      <div ref="loadMoreRef" class="load-more">
-        <div v-if="loading" class="loading-spinner">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          加载中...
-        </div>
-        <div v-else-if="!hasMore && photos.length > 0" class="no-more">
-          已加载全部照片
-        </div>
+      <!-- 加载状态 -->
+      <div class="load-more" v-if="loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        加载中...
       </div>
+      <div class="no-more" v-else-if="filteredPhotos.length === 0">
+        暂无照片
+      </div>
+    </div>
 
-      <!-- 灯箱预览 -->
-      <Teleport to="body">
-        <div v-if="lightboxVisible" class="lightbox" @click="closeLightbox">
-          <div class="lightbox-content" @click.stop>
+    <!-- 灯箱预览（带评论） -->
+    <Teleport to="body">
+      <div v-if="lightboxVisible" class="lightbox" @click="closeLightbox">
+        <div class="lightbox-container" @click.stop>
+          <!-- 左侧图片 -->
+          <div class="lightbox-left">
             <button class="lightbox-close" @click="closeLightbox">&times;</button>
             <button
               v-if="currentIndex > 0"
@@ -73,30 +72,74 @@
               :alt="currentPhoto?.title"
             />
             <button
-              v-if="currentIndex < photos.length - 1"
+              v-if="currentIndex < filteredPhotos.length - 1"
               class="lightbox-next"
               @click="nextPhoto"
             >&rsaquo;</button>
-            <div class="lightbox-info" v-if="currentPhoto?.title || currentPhoto?.description">
-              <h3 v-if="currentPhoto?.title">{{ currentPhoto.title }}</h3>
-              <p v-if="currentPhoto?.description">{{ currentPhoto.description }}</p>
+          </div>
+
+          <!-- 右侧信息和评论 -->
+          <div class="lightbox-right">
+            <div class="photo-detail">
+              <h3 v-if="currentPhoto?.title" class="photo-title">{{ currentPhoto.title }}</h3>
+              <p v-if="currentPhoto?.description" class="photo-desc">{{ currentPhoto.description }}</p>
+              <p class="photo-date">{{ formatDate(currentPhoto?.createdAt) }}</p>
+            </div>
+
+            <!-- 评论区 -->
+            <div class="comments-section">
+              <h4 class="comments-title">评论</h4>
+              <div class="comments-list" ref="commentsListRef">
+                <div v-for="comment in comments" :key="comment.id" class="comment-item">
+                  <div class="comment-header">
+                    <span class="comment-author">{{ comment.author }}</span>
+                    <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
+                  </div>
+                  <p class="comment-content">{{ comment.content }}</p>
+                </div>
+                <div v-if="comments.length === 0" class="no-comments">
+                  暂无评论，来说点什么吧~
+                </div>
+              </div>
+
+              <!-- 评论输入 -->
+              <div class="comment-input">
+                <input
+                  v-model="newComment"
+                  placeholder="写下你的评论..."
+                  @keyup.enter="submitComment"
+                  class="comment-field"
+                />
+                <button class="btn-submit" @click="submitComment" :disabled="!newComment.trim()">
+                  发送
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </Teleport>
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * 摄影作品页面
- * 壁纸网站风格：瀑布流布局、懒加载、无限滚动、灯箱预览
+ * 壁纸网站风格：瀑布流布局、懒加载、灯箱预览、评论功能
  */
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { getPhotos } from '@/api'
 import type { Photo } from '@/types'
+
+// 评论类型
+interface Comment {
+  id: number
+  photoId: number
+  author: string
+  content: string
+  createdAt: string
+}
 
 // 照片列表
 const photos = ref<Photo[]>([])
@@ -105,10 +148,7 @@ const photos = ref<Photo[]>([])
 const selectedCategory = ref('')
 const photoCategories = ref<string[]>([])
 
-// 分页和加载状态
-const currentPage = ref(1)
-const pageSize = 20
-const hasMore = ref(true)
+// 加载状态
 const loading = ref(false)
 
 // 灯箱状态
@@ -116,37 +156,58 @@ const lightboxVisible = ref(false)
 const currentPhoto = ref<Photo | null>(null)
 const currentIndex = ref(0)
 
-// DOM引用
-const masonryRef = ref<HTMLElement | null>(null)
-const loadMoreRef = ref<HTMLElement | null>(null)
-
-// Intersection Observer
-let observer: IntersectionObserver | null = null
+// 评论相关
+const comments = ref<Comment[]>([])
+const newComment = ref('')
+const commentsListRef = ref<HTMLElement | null>(null)
 
 /**
- * 获取照片宽高比（用于瀑布流）
- * 默认 4:3 比例
+ * 根据分类过滤照片
  */
-const getAspectRatio = (_photo: Photo) => {
-  return '75%'
+const filteredPhotos = computed(() => {
+  if (!selectedCategory.value) return photos.value
+  return photos.value.filter(p => p.category === selectedCategory.value)
+})
+
+/**
+ * 格式化日期
+ */
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 /**
- * 图片加载完成回调
+ * 格式化时间（用于评论）
  */
-const onImageLoad = (e: Event) => {
-  const img = e.target as HTMLImageElement
-  img.style.opacity = '1'
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+  return formatDate(dateStr)
 }
 
 /**
- * 打开灯箱预览
+ * 打开灯箱
  */
 const openLightbox = (photo: Photo) => {
   currentPhoto.value = photo
-  currentIndex.value = photos.value.findIndex(p => p.id === photo.id)
+  currentIndex.value = filteredPhotos.value.findIndex(p => p.id === photo.id)
   lightboxVisible.value = true
   document.body.style.overflow = 'hidden'
+  loadComments(photo.id)
 }
 
 /**
@@ -158,52 +219,83 @@ const closeLightbox = () => {
 }
 
 /**
- * 上一张照片
+ * 上一张
  */
 const prevPhoto = () => {
   if (currentIndex.value > 0) {
     currentIndex.value--
-    currentPhoto.value = photos.value[currentIndex.value]
+    currentPhoto.value = filteredPhotos.value[currentIndex.value]
+    loadComments(currentPhoto.value.id)
   }
 }
 
 /**
- * 下一张照片
+ * 下一张
  */
 const nextPhoto = () => {
-  if (currentIndex.value < photos.value.length - 1) {
+  if (currentIndex.value < filteredPhotos.value.length - 1) {
     currentIndex.value++
-    currentPhoto.value = photos.value[currentIndex.value]
+    currentPhoto.value = filteredPhotos.value[currentIndex.value]
+    loadComments(currentPhoto.value.id)
   }
+}
+
+/**
+ * 加载评论
+ */
+const loadComments = (photoId: number) => {
+  // 从本地存储加载评论
+  const stored = localStorage.getItem(`photo_comments_${photoId}`)
+  if (stored) {
+    comments.value = JSON.parse(stored)
+  } else {
+    comments.value = []
+  }
+}
+
+/**
+ * 提交评论
+ */
+const submitComment = () => {
+  if (!newComment.value.trim() || !currentPhoto.value) return
+
+  const comment: Comment = {
+    id: Date.now(),
+    photoId: currentPhoto.value.id,
+    author: '访客',
+    content: newComment.value.trim(),
+    createdAt: new Date().toISOString()
+  }
+
+  comments.value.push(comment)
+
+  // 保存到本地存储
+  localStorage.setItem(
+    `photo_comments_${currentPhoto.value.id}`,
+    JSON.stringify(comments.value)
+  )
+
+  newComment.value = ''
+
+  // 滚动到底部
+  setTimeout(() => {
+    if (commentsListRef.value) {
+      commentsListRef.value.scrollTop = commentsListRef.value.scrollHeight
+    }
+  }, 100)
 }
 
 /**
  * 获取照片列表
  */
-const fetchPhotos = async (reset = false) => {
-  if (loading.value) return
-
+const fetchPhotos = async () => {
   loading.value = true
-
   try {
-    const { data } = await getPhotos({
-      page: reset ? 1 : currentPage.value,
-      pageSize,
-      category: selectedCategory.value || undefined
-    })
-
-    if (reset) {
-      photos.value = data.items
-      currentPage.value = 2
-    } else {
-      photos.value = [...photos.value, ...data.items]
-      currentPage.value++
-    }
-
-    hasMore.value = data.hasNextPage
+    const { data } = await getPhotos({ pageSize: 100 })
+    photos.value = data.items
 
     // 提取分类
-    const cats = new Set(photos.value.map(p => p.category).filter(Boolean))
+    const cats = new Set(data.items.map(p => p.category).filter(Boolean))
     photoCategories.value = Array.from(cats) as string[]
   } catch {
     // 静默处理
@@ -212,33 +304,9 @@ const fetchPhotos = async (reset = false) => {
   }
 }
 
-/**
- * 设置 Intersection Observer 实现无限滚动
- */
-const setupObserver = () => {
-  if (!loadMoreRef.value) return
-
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && hasMore.value && !loading.value) {
-        fetchPhotos()
-      }
-    },
-    { threshold: 0.1 }
-  )
-
-  observer.observe(loadMoreRef.value)
-}
-
-// 监听分类变化
-watch(selectedCategory, () => {
-  fetchPhotos(true)
-})
-
-// 键盘事件（灯箱）
+// 键盘事件
 const handleKeydown = (e: KeyboardEvent) => {
   if (!lightboxVisible.value) return
-
   switch (e.key) {
     case 'Escape':
       closeLightbox()
@@ -253,13 +321,11 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  fetchPhotos(true)
-  nextTick(setupObserver)
+  fetchPhotos()
   window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
-  observer?.disconnect()
   window.removeEventListener('keydown', handleKeydown)
 })
 </script>
@@ -280,13 +346,14 @@ onUnmounted(() => {
 }
 
 .tag {
-  padding: 6px 16px;
+  padding: 8px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  color: var(--text-secondary);
 }
 
 .tag:hover,
@@ -317,30 +384,20 @@ onUnmounted(() => {
 .masonry-item {
   break-inside: avoid;
   margin-bottom: 16px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
   background: var(--bg-secondary);
 }
 
-.photo-wrapper {
-  position: relative;
-  overflow: hidden;
-}
-
-.photo-wrapper img {
+.photo-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  top: 0;
-  left: 0;
-  opacity: 0;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  display: block;
+  transition: transform 0.3s ease;
 }
 
-.masonry-item:hover .photo-wrapper img {
+.masonry-item:hover .photo-img {
   transform: scale(1.05);
 }
 
@@ -361,13 +418,10 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-/* 加载更多 */
+/* 加载状态 */
 .load-more {
   padding: 40px 0;
   text-align: center;
-}
-
-.loading-spinner {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -376,11 +430,12 @@ onUnmounted(() => {
 }
 
 .no-more {
+  padding: 40px 0;
+  text-align: center;
   color: var(--text-secondary);
-  font-size: 14px;
 }
 
-/* 灯箱样式 */
+/* ========== 灯箱样式 ========== */
 .lightbox {
   position: fixed;
   top: 0;
@@ -394,32 +449,47 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.lightbox-content {
+.lightbox-container {
+  display: flex;
+  width: 90vw;
+  height: 85vh;
+  max-width: 1400px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.lightbox-left {
+  flex: 1;
   position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
 .lightbox-img {
-  max-width: 90vw;
-  max-height: 85vh;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
 .lightbox-close {
   position: absolute;
-  top: -40px;
-  right: 0;
-  background: none;
+  top: 16px;
+  left: 16px;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  font-size: 32px;
+  font-size: 24px;
   cursor: pointer;
   width: 40px;
   height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10;
 }
 
 .lightbox-prev,
@@ -430,46 +500,177 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  font-size: 48px;
+  font-size: 36px;
   cursor: pointer;
-  width: 60px;
+  width: 48px;
   height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  z-index: 10;
 }
+
+.lightbox-prev { left: 8px; }
+.lightbox-next { right: 8px; }
 
 .lightbox-prev:hover,
 .lightbox-next:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.lightbox-prev {
-  left: -80px;
+/* 右侧信息和评论 */
+.lightbox-right {
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-color);
 }
 
-.lightbox-next {
-  right: -80px;
+.photo-detail {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.lightbox-info {
-  position: absolute;
-  bottom: -60px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: white;
+.photo-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
 }
 
-.lightbox-info h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-}
-
-.lightbox-info p {
-  margin: 0;
+.photo-desc {
   font-size: 14px;
-  opacity: 0.8;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.photo-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 评论区 */
+.comments-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.comments-title {
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.comment-item {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.comment-author {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.comment-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.comment-content {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.no-comments {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+/* 评论输入 */
+.comment-input {
+  padding: 16px 24px;
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.comment-field {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.comment-field:focus {
+  border-color: var(--accent-primary);
+}
+
+.btn-submit {
+  padding: 10px 20px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--accent-secondary);
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .lightbox-container {
+    flex-direction: column;
+    width: 95vw;
+    height: 90vh;
+  }
+
+  .lightbox-left {
+    flex: 1;
+  }
+
+  .lightbox-right {
+    width: 100%;
+    height: 40vh;
+  }
 }
 </style>
