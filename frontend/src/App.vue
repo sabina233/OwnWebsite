@@ -1,10 +1,6 @@
 <template>
   <!-- 应用根组件 - 根据路由渲染不同页面 -->
-  <router-view v-slot="{ Component }">
-    <Transition name="fade" mode="out-in">
-      <component :is="Component" :key="$route.fullPath" />
-    </Transition>
-  </router-view>
+  <router-view :key="$route.fullPath" />
 </template>
 
 <script setup lang="ts">
